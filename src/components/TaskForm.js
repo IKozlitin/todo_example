@@ -41,7 +41,7 @@ const TaskForm = () => {
                         className="form-control"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
-                        placeholder="Введите название задачи"
+                        placeholder="Введите задачи"
                     />
 
                     <input 

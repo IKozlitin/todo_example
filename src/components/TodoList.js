@@ -5,7 +5,7 @@ import {format} from "date-fns";
 const serverUrl = "http://localhost:5000/tasks";
 
 const TodoList = () => {
-    //создаем состояние todos с нвалным значением [], которое будет изменяться при вызове setTodos
+    //создаем состояние todos с начальным значением [], которое будет изменяться при вызове setTodos
     const [todos, setTodos] = useState([]);
 
     //сработает один раз при открытии компонента

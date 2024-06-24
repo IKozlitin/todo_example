@@ -81,6 +81,7 @@ const TodoList = ({ setTodo }) => {
                 <thead>
                     <tr>
                         <th>Название</th>
+                        <th>Заметки</th>
                         <th>Выполнить до</th>
                         <th>Действия</th>
                     </tr>
@@ -91,13 +92,14 @@ const TodoList = ({ setTodo }) => {
                             key={todo.id}
                             className={setPriorityColor(todo.priority)}
                         >
-                            <td style={{width: "65%"}}>{todo.title}</td>
+                            <td style={{width: "15%"}}>{todo.title}</td>
+                            <td style={{width: "45%"}}>{todo.notes}</td>
                             <td>
                                 {todo.deadline
                                     ? format(
-                                          new Date(todo.deadline),
-                                          "dd.MM.yyyy HH:mm"
-                                      )
+                                        new Date(todo.deadline),
+                                        "dd.MM.yyyy HH:mm"
+                                    )
                                     : ""}
                             </td>
                             <td>

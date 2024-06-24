@@ -6,12 +6,14 @@ const serverUrl = "http://localhost:5000/tasks";
 const TaskForm = ({ todo, reset }) => {
     //создаем состояние todos с начальным значением [], которое будет изменяться при вызове setTodos
     const [title, setTitle] = useState("");
+    const [notes, setNotes] = useState("");
     const [deadline, setDeadline] = useState("");
     const [priority, setPriority] = useState("");
 
     useEffect(() => {
         if (todo) {
             setTitle(todo.title);
+            setNotes(todo.notes);
             setDeadline(todo.deadline);
             setPriority(todo.priority);
         }
@@ -27,6 +29,7 @@ const TaskForm = ({ todo, reset }) => {
                     `${serverUrl}/${todo.id}`,
                     {
                         title,
+                        notes,
                         deadline,
                         priority,
                     },
@@ -34,6 +37,7 @@ const TaskForm = ({ todo, reset }) => {
                 );
                 console.log(response.data.message);
                 setTitle("");
+                setNotes("");
                 setDeadline("");
                 setPriority("");
             } else {
@@ -41,6 +45,7 @@ const TaskForm = ({ todo, reset }) => {
                     serverUrl,
                     {
                         title,
+                        notes,
                         deadline,
                         priority,
                     },
@@ -48,6 +53,7 @@ const TaskForm = ({ todo, reset }) => {
                 );
                 console.log(response.data.message);
                 setTitle("");
+                setNotes("");
                 setDeadline("");
                 setPriority("");
             }
@@ -68,7 +74,15 @@ const TaskForm = ({ todo, reset }) => {
                         className="form-control"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
-                        placeholder="Введите название задачи..."
+                        placeholder="Введите задачи..."
+                    />
+
+                    <input
+                        type="text"
+                        className="form-control"
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        placeholder="Введите заметки..."
                     />
 
                     <input
@@ -92,7 +106,7 @@ const TaskForm = ({ todo, reset }) => {
                     </select>
 
                     <button
-                        className="btn btn-outline-primary fw-bold"
+                        className="btn btn-outline-dark fw-bold"
                         type="submit"
                     >
                         {todo ? "Изменить" : "Добавить"}

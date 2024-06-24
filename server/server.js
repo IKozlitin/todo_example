@@ -26,7 +26,7 @@ db.serialize(() => {
     db.run("insert or ignore into roles(role) values('user')");
 
     db.run(
-        "create table if not exists tasks(id integer primary key autoincrement, title text, deadline datetime, priority text, userid integer default null, completed byte default 0, foreign key(userid) references users(id))"
+        "create table if not exists tasks(id integer primary key autoincrement, title text, notes text, deadline datetime, priority text, userid integer default null, completed byte default 0, foreign key(userid) references users(id))"
     );
 });
 
@@ -151,10 +151,10 @@ app.get("/tasks", authenticateToken, (req, res) => {
 
 //добавление новой задачи
 app.post("/tasks", authenticateToken, (req, res) => {
-    const { title, deadline, priority } = req.body;
+    const { title, notes, deadline, priority } = req.body;
     db.run(
-        "insert into tasks(title, deadline, priority, userid) values(?,?,?,?)",
-        [title, deadline, priority, req.user.id],
+        "insert into tasks(title, notes, deadline, priority, userid) values(?,?,?,?,?)",
+        [title, notes, deadline, priority, req.user.id],
         (err) => {
             if (err) {
                 return res.status(500).json({ error: err.message });
@@ -167,10 +167,10 @@ app.post("/tasks", authenticateToken, (req, res) => {
 //изменение задачи
 app.put("/tasks/:id", authenticateToken, (req, res) => {
     const { id } = req.params;
-    const { title, deadline, priority } = req.body;
+    const { title, notes, deadline, priority } = req.body;
     db.run(
-        "update tasks set title=?, deadline=?, priority=? where id=?",
-        [title, deadline, priority, id],
+        "update tasks set title=?, notes=?, deadline=?, priority=? where id=?",
+        [title, notes, deadline, priority, id],
         (err) => {
             if (err) {
                 return res.status(500).json({ error: err.message });

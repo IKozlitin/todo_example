@@ -26,11 +26,11 @@ db.serialize(() => {
     db.run("insert or ignore into roles(role) values('user')");
 
     db.run(
-        "create table if not exists tasks(id integer primary key autoincrement, title text, notes text, deadline datetime, priority text, userid integer default null, foreign key(userid) references users(id))"
+        "create table if not exists tasks(id integer primary key autoincrement, title text, deadline datetime, priority text, userid integer default null, completed byte default 0, foreign key(userid) references users(id))"
     );
 });
 
-/*---------------------------------------АВТОРИЗАЦИЯ-----------------------------------------*/
+/* ---------------------------------------АВТОРИЗАЦИЯ------------------------------------------ */
 
 //регистрация
 app.post("/register", async (req, res) => {
@@ -58,7 +58,9 @@ app.post("/register", async (req, res) => {
                     if (err) {
                         return res.status(500).json({ error: err.message });
                     }
-                    res.status(201).json({message: "Пользователь зарегистрирован"});
+                    res.status(201).json({
+                        message: "Пользователь зарегистрирован",
+                    });
                 }
             );
         });
@@ -74,18 +76,27 @@ app.post("/login", (req, res) => {
         [username],
         async (err, user) => {
             if (err || !user) {
-                return res.status(400).json({ message: "Неверное имя пользователя" });
+                return res
+                    .status(400)
+                    .json({ message: "Неверное имя пользователя" });
             }
 
             //сравнение хэшей введенного пароля и из бд
-            const isPasswordValid = await bcrypt.compare(password, user.password);
-            if(!isPasswordValid) {
+            const isPasswordValid = await bcrypt.compare(
+                password,
+                user.password
+            );
+            if (!isPasswordValid) {
                 return res.status(400).json({ message: "Неверный пароль" });
             }
 
             //в jwt-токен запсываем данные пользователя(которые нужны)
-            const token = jwt.sign({id: user.id, username: user.username, role: user.roleid}, "superpupersecretkey", {expiresIn: "1h"});
-            res.json({token});
+            const token = jwt.sign(
+                { id: user.id, username: user.username, role: user.roleid },
+                "superpupersecretkey",
+                { expiresIn: "1h" }
+            );
+            res.json({ token });
         }
     );
 });
@@ -97,74 +108,106 @@ const authenticateToken = (req, res, next) => {
     //получаем токен, или, если запись вида "Bearer token", разделяем по пробелу строку на массив, забираем второй элемент(сам токен)
     const token = authHeader && authHeader.split(" ")[1];
 
-    if(!token) {
-        return res.status(401).json({message: "Токен не обнаружен"});
+    if (!token) {
+        return res.status(401).json({ message: "Токен не обнаружен" });
     }
     jwt.verify(token, "superpupersecretkey", (err, user) => {
-        if(err) {
-            return res.status(403).json({message: "Невалидный токен"});
+        if (err) {
+            return res.status(403).json({ message: "Невалидный токен" });
         }
         //записываем информацию о пользователе
         req.user = user;
         next();
-    })
-}
+    });
+};
 
 //доступ для авторизованных пользователей
 app.get("/protected", authenticateToken, (req, res) => {
-    db.get("select username from users where id=?", [req.user.id], (err, user) => {
-        if(err || !user) {
-            return res.status(404).json({message: "Пользователь не найден"});
+    db.get(
+        "select u.username, r.role from users u, roles r where u.roleid=r.id and u.id=?",
+        [req.user.id],
+        (err, user) => {
+            if (err || !user) {
+                console.log(err);
+                return res
+                    .status(404)
+                    .json({ message: "Пользователь не найден" });
+            }
+            res.json({ user });
+            console.log(user);
         }
-        res.json({user});
-    })
-})
+    );
+});
 
-//получение всех задач
-app.get("/tasks", (req, res) => {
-    db.all("select * from tasks", (err, rows) => {
-        if(err) {
-            return res.status(500).json({error: err.message});
+//получение всех задач по id текущего пользователя
+app.get("/tasks", authenticateToken, (req, res) => {
+    db.all("select * from tasks where userid=? and completed=0", [req.user.id], (err, rows) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
         }
         res.json(rows);
-    })
-})
+    });
+});
 
 //добавление новой задачи
-app.post("/tasks", (req, res) => {
-    const {title, notes, deadline, priority} = req.body;
-    db.run("insert into tasks(title, notes, deadline, priority) values(?,?,?,?)", [title, notes, deadline, priority], (err) => {
-        if(err) {
-            return res.status(500).json({error: err.message});
+app.post("/tasks", authenticateToken, (req, res) => {
+    const { title, deadline, priority } = req.body;
+    db.run(
+        "insert into tasks(title, deadline, priority, userid) values(?,?,?,?)",
+        [title, deadline, priority, req.user.id],
+        (err) => {
+            if (err) {
+                return res.status(500).json({ error: err.message });
+            }
+            res.json({ message: "Задача успешно добавлена" }); 
         }
-        res.json({id: this.lastID});//id последнего добавленного элемента
-    })
-})
+    );
+});
 
 //изменение задачи
-app.put("/tasks/:id", (req, res) => {
-    const {id} = req.params;
-    const {title, notes, deadline, priority} = req.body;
-    db.run("update tasks set title=?, notes=?, deadline=?, priority=? where id=?", [title, notes, deadline, priority, id], (err) => {
-        if(err) {
-            return res.status(500).json({error: err.message});
+app.put("/tasks/:id", authenticateToken, (req, res) => {
+    const { id } = req.params;
+    const { title, deadline, priority } = req.body;
+    db.run(
+        "update tasks set title=?, deadline=?, priority=? where id=?",
+        [title, deadline, priority, id],
+        (err) => {
+            if (err) {
+                return res.status(500).json({ error: err.message });
+            }
+            res.json({ changes: this.changes }); //количество измененных строк
         }
-        res.json({changes: this.changes});//количество измененных строк
-    })
-})
+    );
+});
+
+//выполнение задачи
+app.put("/tasks/complete/:id", authenticateToken, (req, res) => {
+    const { id } = req.params;
+    const { completed } = req.body;
+    db.run(
+        "update tasks set completed=? where id=?",
+        [completed, id],
+        (err) => {
+            if (err) {
+                return res.status(500).json({ error: err.message });
+            }
+            res.json({ changes: this.changes }); //количество измененных строк
+        }
+    );
+});
 
 //удаление задачи
-app.delete("/tasks/:id", (req, res) => {
-    const {id} = req.params;
-    db.run("delete from tasks where id=?", id, err => {
-        if(err) {
-            return res.status(500).json({error: err.message});
+app.delete("/tasks/:id", authenticateToken, (req, res) => {
+    const { id } = req.params;
+    db.run("delete from tasks where id=?", id, (err) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
         }
-        res.json({deleted: this.changes});//количество измененных строк
-    })
-})
+        res.json({ deleted: this.changes }); //количество измененных строк
+    });
+});
 
 //запуск сервера
 app.listen(port, () => {
     console.log("Сервер запущен по адресу: http://localhost:5000");
-})
+});
